@@ -1,8 +1,10 @@
 body {
   font-family: Arial, sans-serif;
-  background-color: #f9f9f9;
-  margin: 0;
-  padding: 20px;
+  /* Set font style */
+  background-color: #2dddf1;
+  /* Set background color */
+  text-align: center;
+  /* Center align text */
 }
 
 h1 {
