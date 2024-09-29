@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>KMeans Clustering</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+
+<body>
+  <h1>KMeans Clustering Visualization</h1>
+  <div>
+    <label for="k">Number of clusters (k):</label>
+    <input type="number" id="k" name="k" min="2" max="10" value="3">
+  </div>
+  <div>
+    <label for="initialization">Initialization Method:</label>
+    <select id="initialization" name="initialization">
+      <option value="random">Random</option>
+      <option value="farthest">Farthest First</option>
+      <option value="kmeans++">KMeans++</option>
+      <option value="manual">Manual</option>
+    </select>
+  </div>
+
+  <div class="button-container">
+    <button id="initialize">Generate New Dataset</button>
+    <button id="step">Step Through KMeans</button>
+    <button id="run">Run to Convergence</button>
+    <button id="reset">Reset Algorithm</button>
+  </div>
+
+  <div id="plot"></div>
+  <script>
+    let manualCentroids = [];
+    function initializePlot() {
+      $.post('/initialize', { k: $('#k').val(), initialization: $('#initialization').val() }, function (response) {
+        updatePlot(response.plot);
+      });
+    }
+    function updatePlot(plotHtml) {
+      $('#plot').html(plotHtml);
+    }
+    $('#initialize').click(function () {
+      const k = $('#k').val();
+      const initialization = $('#initialization').val();
+      if (initialization === 'manual') {
+        manualCentroids = [];
+        $('#plot').off('click');
+        $('#plot').on('click', function (event) {
+          const plotOffset = $(this).offset();
+          const x = event.pageX - plotOffset.left;
+          const y = event.pageY - plotOffset.top;
+          manualCentroids.push({ x: x, y: y });
+          $.post('/manual_centroids', { centroids: JSON.stringify(manualCentroids) }, function (response) {
+            updatePlot(response.plot);
+          }).fail(function (error) {
+            console.error('Error posting manual centroids:', error);
+          });
+        });
+      } else {
+        $('#plot').off('click');
+      }
+      $.post('/initialize', { k: k, initialization: initialization }, function (response) {
+        updatePlot(response.plot);
+      }).fail(function (error) {
+        console.error('Error initializing KMeans:', error);
+      });
+    });
+    $('#step').click(function () {
+      $.post('/step', function (response) {
+        updatePlot(response.plot);
+        if (response.converged) {
+          alert('Converged!');
+        }
+      }).fail(function (error) {
+        console.error('Error during KMeans step:', error);
+      });
+    });
+    $('#run').click(function () {
+      $.post('/run', function (response) {
+        updatePlot(response.plot);
+        alert('Converged!');
+      }).fail(function (error) {
+        console.error('Error running KMeans to convergence:', error);
+      });
+    });
+    $('#reset').click(function () {
+      $.post('/reset', function (response) {
+        if (response.success) {
+          updatePlot(response.plot);
+          if (response.clear_manual_centroids) {
+            manualCentroids = [];
+          }
+        } else {
+          alert('Error: ' + response.error);
+        }
+      }).fail(function (error) {
+        console.error('Error resetting KMeans:', error);
+      });
+    });
+    $(document).ready(function () {
+      initializePlot();
+    });
+  </script>
+</body>
+
+</html>
